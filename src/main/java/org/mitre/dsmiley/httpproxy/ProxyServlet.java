@@ -39,9 +39,11 @@ import org.apache.http.HttpHeaders;
 import org.apache.http.HttpHost;
 import org.apache.http.HttpRequest;
 import org.apache.http.HttpResponse;
+import org.apache.http.client.HttpClient;
 import org.apache.http.client.config.CookieSpecs;
 import org.apache.http.client.config.RequestConfig;
 import org.apache.http.client.methods.AbortableHttpRequest;
+import org.apache.http.client.utils.URIUtils;
 import org.apache.http.config.SocketConfig;
 import org.apache.http.entity.InputStreamEntity;
 import org.apache.http.impl.client.HttpClientBuilder;
@@ -50,9 +52,6 @@ import org.apache.http.message.BasicHttpEntityEnclosingRequest;
 import org.apache.http.message.BasicHttpRequest;
 import org.apache.http.message.HeaderGroup;
 import org.apache.http.util.EntityUtils;
-
-import jdk.nashorn.internal.runtime.URIUtils;
-import sun.net.www.http.HttpClient;
 
 /**
  * An HTTP reverse proxy/gateway servlet. It is designed to be extended for customization
