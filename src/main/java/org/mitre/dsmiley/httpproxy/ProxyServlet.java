@@ -16,33 +16,6 @@
 
 package org.mitre.dsmiley.httpproxy;
 
-import org.apache.http.Header;
-import org.apache.http.HttpEntity;
-import org.apache.http.HttpEntityEnclosingRequest;
-import org.apache.http.HttpHeaders;
-import org.apache.http.HttpHost;
-import org.apache.http.HttpRequest;
-import org.apache.http.HttpResponse;
-import org.apache.http.client.HttpClient;
-import org.apache.http.client.config.CookieSpecs;
-import org.apache.http.client.config.RequestConfig;
-import org.apache.http.client.methods.AbortableHttpRequest;
-import org.apache.http.client.utils.URIUtils;
-import org.apache.http.config.SocketConfig;
-import org.apache.http.entity.InputStreamEntity;
-import org.apache.http.impl.client.HttpClientBuilder;
-import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
-import org.apache.http.message.BasicHeader;
-import org.apache.http.message.BasicHttpEntityEnclosingRequest;
-import org.apache.http.message.BasicHttpRequest;
-import org.apache.http.message.HeaderGroup;
-import org.apache.http.util.EntityUtils;
-
-import javax.servlet.ServletException;
-import javax.servlet.http.Cookie;
-import javax.servlet.http.HttpServlet;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
 import java.io.Closeable;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -51,6 +24,35 @@ import java.net.URI;
 import java.util.BitSet;
 import java.util.Enumeration;
 import java.util.Formatter;
+import java.util.Random;
+
+import javax.servlet.ServletException;
+import javax.servlet.http.Cookie;
+import javax.servlet.http.HttpServlet;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+
+import org.apache.http.Header;
+import org.apache.http.HttpEntity;
+import org.apache.http.HttpEntityEnclosingRequest;
+import org.apache.http.HttpHeaders;
+import org.apache.http.HttpHost;
+import org.apache.http.HttpRequest;
+import org.apache.http.HttpResponse;
+import org.apache.http.client.config.CookieSpecs;
+import org.apache.http.client.config.RequestConfig;
+import org.apache.http.client.methods.AbortableHttpRequest;
+import org.apache.http.config.SocketConfig;
+import org.apache.http.entity.InputStreamEntity;
+import org.apache.http.impl.client.HttpClientBuilder;
+import org.apache.http.message.BasicHeader;
+import org.apache.http.message.BasicHttpEntityEnclosingRequest;
+import org.apache.http.message.BasicHttpRequest;
+import org.apache.http.message.HeaderGroup;
+import org.apache.http.util.EntityUtils;
+
+import jdk.nashorn.internal.runtime.URIUtils;
+import sun.net.www.http.HttpClient;
 
 /**
  * An HTTP reverse proxy/gateway servlet. It is designed to be extended for customization
@@ -152,7 +154,15 @@ public class ProxyServlet extends HttpServlet {
    * it can be overridden.
    */
   protected String getConfigParam(String key) {
-    return getServletConfig().getInitParameter(key);
+    String value = getServletConfig().getInitParameter(key);
+    if(value!=null&&value.contains(",")){
+      String[] values = value.split(",");
+        Random random = new Random();
+        int number = random.nextInt(value.length());
+        return values[number];
+    } else {
+      return value;
+    }
   }
 
   @Override
@@ -349,9 +359,14 @@ public class ProxyServlet extends HttpServlet {
         // Send the content to the client
         copyResponseEntity(proxyResponse, servletResponse, proxyRequest, servletRequest);
       }
-
     } catch (Exception e) {
-      handleRequestException(proxyRequest, e);
+      //try{
+      //  handleRequestException(proxyRequest, e);
+      //}catch(Exception ex){
+        log("get request from backend failed:"+e.getMessage(), e);
+        // servletResponse.setStatus(HttpServletResponse., proxyResponse.getStatusLine().getReasonPhrase());
+        servletResponse.sendError(HttpServletResponse.SC_SERVICE_UNAVAILABLE, e.getMessage());
+      //}
     } finally {
       // make sure the entire entity was consumed, so the connection is released
       if (proxyResponse != null)
