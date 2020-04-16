@@ -158,6 +158,9 @@ public class ProxyServlet extends HttpServlet {
    * it can be overridden.
    */
   protected <T> T  getRandom(List<T> list) {
+        if(list == null){
+          return null;
+        }
         Random random = new Random();
         int number = random.nextInt(list.size());
         return list.get(number);
@@ -715,8 +718,6 @@ public class ProxyServlet extends HttpServlet {
     return theUrl;
   }
 
-  /** The target URI as configured. Not null. */
-  public String getTargetUri() { return targetUri; }
 
   /**
    * Encodes characters in the query or fragment part of the URI.
