@@ -331,7 +331,7 @@ public class ProxyServlet extends HttpServlet {
       throws ServletException, IOException {
     //initialize request attributes from caches if unset by a subclass by this point
     String targetUri = getRandom(this.targetUris);
-    log("targetUri="+targetUri);
+    //log("targetUri="+targetUri);
     if (servletRequest.getAttribute(ATTR_TARGET_URI) == null) {
       servletRequest.setAttribute(ATTR_TARGET_URI, targetUri);
     }
