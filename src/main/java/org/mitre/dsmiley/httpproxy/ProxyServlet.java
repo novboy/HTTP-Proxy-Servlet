@@ -21,9 +21,14 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.net.HttpCookie;
 import java.net.URI;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.BitSet;
 import java.util.Enumeration;
 import java.util.Formatter;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.Random;
 
 import javax.servlet.ServletException;
@@ -128,9 +133,9 @@ public class ProxyServlet extends HttpServlet {
   //These next 3 are cached here, and should only be referred to in initialization logic. See the
   // ATTR_* parameters.
   /** From the configured parameter "targetUri". */
-  protected String targetUri;
-  protected URI targetUriObj;//new URI(targetUri)
-  protected HttpHost targetHost;//URIUtils.extractHost(targetUriObj);
+  protected List<String> targetUris;
+  protected Map<String,URI> targetMap = new HashMap<String,URI>();//new URI(targetUri)
+  protected Map<String,HttpHost> targetHostMap = new HashMap<String,HttpHost>();//URIUtils.extractHost(targetUriObj);
 
   private HttpClient proxyClient;
 
@@ -152,16 +157,26 @@ public class ProxyServlet extends HttpServlet {
    * Reads a configuration parameter. By default it reads servlet init parameters but
    * it can be overridden.
    */
-  protected String getConfigParam(String key) {
+  protected <T> T  getRandom(List<T> list) {
+        Random random = new Random();
+        int number = random.nextInt(list.size());
+        return list.get(number);
+  }
+
+  protected List<String> getConfigParamList(String key) {
     String value = getServletConfig().getInitParameter(key);
+    List<String> list = new ArrayList<String>();
     if(value!=null&&value.contains(",")){
       String[] values = value.split(",");
-        Random random = new Random();
-        int number = random.nextInt(value.length());
-        return values[number];
+      list = Arrays.asList(values);
     } else {
-      return value;
+      list.add(value);
     }
+    return list;
+  }
+
+  protected String getConfigParam(String key) {
+    return getServletConfig().getInitParameter(key);
   }
 
   @Override
@@ -249,16 +264,21 @@ public class ProxyServlet extends HttpServlet {
   }
 
   protected void initTarget() throws ServletException {
-    targetUri = getConfigParam(P_TARGET_URI);
-    if (targetUri == null)
+    targetUris = getConfigParamList(P_TARGET_URI);
+    if (targetUris == null|| targetUris.size() == 0)
       throw new ServletException(P_TARGET_URI+" is required.");
     //test it's valid
-    try {
-      targetUriObj = new URI(targetUri);
-    } catch (Exception e) {
-      throw new ServletException("Trying to process targetUri init parameter: "+e,e);
+    for(int i =0; i<targetUris.size();i++ ){
+      try {
+        String url = targetUris.get(i);
+        URI uri = new URI(url);
+        this.targetMap.put(url, uri);
+        HttpHost targetHost = URIUtils.extractHost(uri);
+        this.targetHostMap.put(url, targetHost);
+      } catch (Exception e) {
+        throw new ServletException("Trying to process targetUri init parameter: "+e,e);
+      }
     }
-    targetHost = URIUtils.extractHost(targetUriObj);
   }
 
   /**
@@ -307,11 +327,13 @@ public class ProxyServlet extends HttpServlet {
   protected void service(HttpServletRequest servletRequest, HttpServletResponse servletResponse)
       throws ServletException, IOException {
     //initialize request attributes from caches if unset by a subclass by this point
+    String targetUri = getRandom(this.targetUris);
+    log("targetUri="+targetUri);
     if (servletRequest.getAttribute(ATTR_TARGET_URI) == null) {
       servletRequest.setAttribute(ATTR_TARGET_URI, targetUri);
     }
     if (servletRequest.getAttribute(ATTR_TARGET_HOST) == null) {
-      servletRequest.setAttribute(ATTR_TARGET_HOST, targetHost);
+      servletRequest.setAttribute(ATTR_TARGET_HOST, this.targetHostMap.get(targetUri));
     }
 
     // Make the Request
